@@ -1,23 +1,26 @@
 # github.com/letsencrypt/challtestsrv v1.2.0
 ## explicit
 github.com/letsencrypt/challtestsrv
-# github.com/miekg/dns v1.1.15
+# github.com/miekg/dns v1.1.43
 ## explicit
 github.com/miekg/dns
+# github.com/open-quantum-safe/liboqs-go v0.0.0-20210711155910-e7325d463abc
+## explicit
+github.com/open-quantum-safe/liboqs-go/oqs
 # golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/pbkdf2
-# golang.org/x/net v0.0.0-20181207154023-610586996380
-## explicit
+# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 golang.org/x/net/bpf
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-# golang.org/x/sys v0.0.0-20181206074257-70b957f3b65e
-## explicit
+# golang.org/x/sys v0.0.0-20210303074136-134d130e1a04
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
+golang.org/x/sys/windows
 # gopkg.in/square/go-jose.v2 v2.1.9
 ## explicit
 gopkg.in/square/go-jose.v2
