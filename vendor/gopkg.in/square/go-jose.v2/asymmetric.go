@@ -20,6 +20,8 @@ import (
 	"crypto"
 	"crypto/aes"
 	"crypto/ecdsa"
+	"crypto/pqc"
+	"crypto/pqc/dilithium"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -29,9 +31,19 @@ import (
 	"math/big"
 
 	"golang.org/x/crypto/ed25519"
-	"gopkg.in/square/go-jose.v2/cipher"
+	josecipher "gopkg.in/square/go-jose.v2/cipher"
 	"gopkg.in/square/go-jose.v2/json"
 )
+
+//A generic Dilithium5-based encrypter/verifier
+type dilithium5EncrypterVerifier struct {
+	publicKey *pqc.PublicKey
+}
+
+// A generic Dilithium5-based decrypter/signer
+type dilithium5DecrypterSigner struct {
+	privateKey *pqc.PrivateKey
+}
 
 // A generic RSA-based encrypter/verifier
 type rsaEncrypterVerifier struct {
@@ -66,6 +78,51 @@ type ecDecrypterSigner struct {
 
 type edDecrypterSigner struct {
 	privateKey ed25519.PrivateKey
+}
+
+// newRSARecipient creates recipientKeyInfo based on the given key.
+func newDilithium5Recipient(keyAlg KeyAlgorithm, publicKey *pqc.PublicKey) (recipientKeyInfo, error) {
+	// Verify that key management algorithm is supported by this encrypter
+	switch keyAlg {
+	case DIRECT:
+	default:
+		return recipientKeyInfo{}, ErrUnsupportedAlgorithm
+	}
+
+	if publicKey == nil {
+		return recipientKeyInfo{}, errors.New("invalid public key")
+	}
+
+	return recipientKeyInfo{
+		keyAlg: keyAlg,
+		keyEncrypter: &dilithium5EncrypterVerifier{
+			publicKey: publicKey,
+		},
+	}, nil
+}
+
+// newDilithium5Signer creates a recipientSigInfo based on the given key.
+func newDilithium5Signer(sigAlg SignatureAlgorithm, privateKey *pqc.PrivateKey) (recipientSigInfo, error) {
+	// Verify that key management algorithm is supported by this encrypter
+	switch sigAlg {
+	case HS256, HS384, HS512:
+	default:
+		return recipientSigInfo{}, ErrUnsupportedAlgorithm
+	}
+
+	if privateKey == nil {
+		return recipientSigInfo{}, errors.New("invalid private key")
+	}
+
+	return recipientSigInfo{
+		sigAlg: sigAlg,
+		publicKey: staticPublicKey(&JSONWebKey{
+			Key: privateKey.Public(),
+		}),
+		signer: &dilithium5DecrypterSigner{
+			privateKey: privateKey,
+		},
+	}, nil
 }
 
 // newRSARecipient creates recipientKeyInfo based on the given key.
@@ -175,6 +232,101 @@ func newECDSASigner(sigAlg SignatureAlgorithm, privateKey *ecdsa.PrivateKey) (re
 			privateKey: privateKey,
 		},
 	}, nil
+}
+
+// Unimplemented
+func (ctx dilithium5EncrypterVerifier) encryptKey(cek []byte, alg KeyAlgorithm) (recipientInfo, error) {
+	return recipientInfo{
+		encryptedKey: nil,
+		header:       nil,
+	}, nil
+}
+
+// Unimplemented
+func (ctx dilithium5EncrypterVerifier) encrypt(cek []byte, alg KeyAlgorithm) ([]byte, error) {
+	return nil, ErrUnsupportedAlgorithm
+}
+
+// Unimplemented
+func (ctx dilithium5DecrypterSigner) decryptKey(headers rawHeader, recipient *recipientInfo, generator keyGenerator) ([]byte, error) {
+	return nil, nil
+}
+
+// Unimplemented
+func (ctx dilithium5DecrypterSigner) decrypt(jek []byte, alg KeyAlgorithm, generator keyGenerator) ([]byte, error) {
+	return nil, ErrUnsupportedAlgorithm
+}
+
+// Sign the given payload
+func (ctx dilithium5DecrypterSigner) signPayload(payload []byte, alg SignatureAlgorithm) (Signature, error) {
+	var hash crypto.Hash
+
+	switch alg {
+	case HS256:
+		hash = crypto.SHA256
+	case HS384:
+		hash = crypto.SHA384
+	case HS512:
+		hash = crypto.SHA512
+	default:
+		return Signature{}, ErrUnsupportedAlgorithm
+	}
+
+	hasher := hash.New()
+
+	// According to documentation, Write() on hash never fails
+	_, _ = hasher.Write(payload)
+	// hashed := hasher.Sum(nil)
+
+	var out []byte
+	var err error
+
+	switch alg {
+	case HS256, HS384, HS512:
+		out, err = ctx.privateKey.Sign(nil, payload, nil)
+		//out, err = pqc.Sign(randReader, ctx.privateKey, hash, hashed)
+	}
+
+	if err != nil {
+		return Signature{}, err
+	}
+
+	return Signature{
+		Signature: out,
+		protected: &rawHeader{},
+	}, nil
+}
+
+// Verify the given payload
+func (ctx dilithium5EncrypterVerifier) verifyPayload(payload []byte, signature []byte, alg SignatureAlgorithm) error {
+	var hash crypto.Hash
+
+	switch alg {
+	case HS256:
+		hash = crypto.SHA256
+	case HS384:
+		hash = crypto.SHA384
+	case HS512:
+		hash = crypto.SHA512
+	default:
+		return ErrUnsupportedAlgorithm
+	}
+
+	hasher := hash.New()
+
+	// According to documentation, Write() on hash never fails
+	_, _ = hasher.Write(payload)
+	// hashed := hasher.Sum(nil)
+
+	switch alg {
+	case HS256, HS384, HS512:
+		if dilithium.VerifyDilithium5(payload, signature, ctx.publicKey) {
+			return nil
+		}
+		return ErrCryptoFailure
+	}
+
+	return ErrUnsupportedAlgorithm
 }
 
 // Encrypt the given payload and update the object.

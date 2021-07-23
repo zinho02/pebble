@@ -18,6 +18,7 @@ package jose
 
 import (
 	"crypto/ecdsa"
+	"crypto/pqc"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -256,6 +257,13 @@ func makeJWERecipient(alg KeyAlgorithm, encryptionKey interface{}) (recipientKey
 		return newRSARecipient(alg, encryptionKey)
 	case *ecdsa.PublicKey:
 		return newECDHRecipient(alg, encryptionKey)
+	case *pqc.PublicKey:
+		switch encryptionKey.AlgName {
+		case "dilithium5":
+			return newDilithium5Recipient(alg, encryptionKey)
+		default:
+			return recipientKeyInfo{}, ErrUnsupportedKeyType
+		}
 	case []byte:
 		return newSymmetricRecipient(alg, encryptionKey)
 	case string:
@@ -280,6 +288,15 @@ func newDecrypter(decryptionKey interface{}) (keyDecrypter, error) {
 		return &ecDecrypterSigner{
 			privateKey: decryptionKey,
 		}, nil
+	case *pqc.PrivateKey:
+		switch decryptionKey.AlgName {
+		case "dilithium5":
+			return &dilithium5DecrypterSigner{
+				privateKey: decryptionKey,
+			}, nil
+		default:
+			return nil, ErrUnsupportedKeyType
+		}
 	case []byte:
 		return &symmetricKeyCipher{
 			key: decryptionKey,

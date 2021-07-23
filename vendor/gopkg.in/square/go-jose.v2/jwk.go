@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/pqc"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -50,12 +51,14 @@ type rawJSONWebKey struct {
 	// RSA uses D, P and Q, while ECDSA uses only D. Fields Dp, Dq, and Qi are
 	// completely optional. Therefore for RSA/ECDSA, D != nil is a contract that
 	// we have a private key whereas D == nil means we have only a public key.
-	D  *byteBuffer `json:"d,omitempty"`
-	P  *byteBuffer `json:"p,omitempty"`
-	Q  *byteBuffer `json:"q,omitempty"`
-	Dp *byteBuffer `json:"dp,omitempty"`
-	Dq *byteBuffer `json:"dq,omitempty"`
-	Qi *byteBuffer `json:"qi,omitempty"`
+	D       *byteBuffer `json:"d,omitempty"`
+	P       *byteBuffer `json:"p,omitempty"`
+	Q       *byteBuffer `json:"q,omitempty"`
+	Dp      *byteBuffer `json:"dp,omitempty"`
+	Dq      *byteBuffer `json:"dq,omitempty"`
+	Qi      *byteBuffer `json:"qi,omitempty"`
+	PQCPriv *byteBuffer `json:"pqcpriv,omitempty`
+	PQCPub  *byteBuffer `json:"pqcpub,omitempty"`
 	// Certificates
 	X5c []string `json:"x5c,omitempty"`
 }
@@ -87,6 +90,11 @@ func (k JSONWebKey) MarshalJSON() ([]byte, error) {
 		raw, err = fromEcPrivateKey(key)
 	case *rsa.PrivateKey:
 		raw, err = fromRsaPrivateKey(key)
+	case *pqc.PrivateKey:
+		switch key.AlgName {
+		case "dilithium5":
+			raw, err = fromDilithium5PrivateKey(key)
+		}
 	case []byte:
 		raw, err = fromSymmetricKey(key)
 	default:
@@ -129,6 +137,12 @@ func (k *JSONWebKey) UnmarshalJSON(data []byte) (err error) {
 			key, err = raw.rsaPrivateKey()
 		} else {
 			key, err = raw.rsaPublicKey()
+		}
+	case "Dilithium5":
+		if raw.PQCPriv != nil {
+			key, err = raw.dilithium5PrivateKey()
+		} else {
+			key, err = raw.dilithium5PublicKey()
 		}
 	case "oct":
 		key, err = raw.symmetricKey()
@@ -181,6 +195,7 @@ func (s *JSONWebKeySet) Key(kid string) []JSONWebKey {
 const rsaThumbprintTemplate = `{"e":"%s","kty":"RSA","n":"%s"}`
 const ecThumbprintTemplate = `{"crv":"%s","kty":"EC","x":"%s","y":"%s"}`
 const edThumbprintTemplate = `{"crv":"%s","kty":"OKP",x":"%s"}`
+const dilithium5ThumbprintTemplate = `{"kty":"Dilithium5"}`
 
 func ecThumbprintInput(curve elliptic.Curve, x, y *big.Int) (string, error) {
 	coordLength := curveSize(curve)
@@ -202,6 +217,10 @@ func rsaThumbprintInput(n *big.Int, e int) (string, error) {
 	return fmt.Sprintf(rsaThumbprintTemplate,
 		newBufferFromInt(uint64(e)).base64(),
 		newBuffer(n.Bytes()).base64()), nil
+}
+
+func dilithium5ThumbPrintInput() (string, error) {
+	return fmt.Sprintf(rsaThumbprintTemplate), nil
 }
 
 func edThumbprintInput(ed ed25519.PublicKey) (string, error) {
@@ -231,6 +250,11 @@ func (k *JSONWebKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 		input, err = rsaThumbprintInput(key.N, key.E)
 	case ed25519.PrivateKey:
 		input, err = edThumbprintInput(ed25519.PublicKey(key[0:32]))
+	case *pqc.PrivateKey:
+		switch key.AlgName {
+		case "dilithium5":
+			input, err = dilithium5ThumbPrintInput()
+		}
 	default:
 		return nil, fmt.Errorf("square/go-jose: unknown key type '%s'", reflect.TypeOf(key))
 	}
@@ -247,7 +271,7 @@ func (k *JSONWebKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 // IsPublic returns true if the JWK represents a public key (not symmetric, not private).
 func (k *JSONWebKey) IsPublic() bool {
 	switch k.Key.(type) {
-	case *ecdsa.PublicKey, *rsa.PublicKey, ed25519.PublicKey:
+	case *ecdsa.PublicKey, *rsa.PublicKey, ed25519.PublicKey, *pqc.PublicKey:
 		return true
 	default:
 		return false
@@ -267,6 +291,11 @@ func (k *JSONWebKey) Public() JSONWebKey {
 		ret.Key = key.Public()
 	case ed25519.PrivateKey:
 		ret.Key = key.Public()
+	case *pqc.PrivateKey:
+		switch key.AlgName {
+		case "dilithium5":
+			ret.Key = key.Public()
+		}
 	default:
 		return JSONWebKey{} // returning invalid key
 	}
@@ -303,6 +332,16 @@ func (k *JSONWebKey) Valid() bool {
 		if len(key) != 64 {
 			return false
 		}
+	case *pqc.PublicKey:
+		switch key.AlgName {
+		case "dilithium5":
+			return true
+		}
+	case *pqc.PrivateKey:
+		switch key.AlgName {
+		case "dilithium5":
+			return true
+		}
 	default:
 		return false
 	}
@@ -320,6 +359,17 @@ func (key rawJSONWebKey) rsaPublicKey() (*rsa.PublicKey, error) {
 	}, nil
 }
 
+func (key rawJSONWebKey) dilithium5PublicKey() (*pqc.PublicKey, error) {
+	if key.PQCPub == nil {
+		return nil, fmt.Errorf("square/go-jose: invalid Dilithium5 key")
+	}
+
+	return &pqc.PublicKey{
+		Bytes:   key.PQCPub.bytes(),
+		AlgName: key.Kty,
+	}, nil
+}
+
 func fromEdPublicKey(pub ed25519.PublicKey) *rawJSONWebKey {
 	return &rawJSONWebKey{
 		Kty: "OKP",
@@ -333,6 +383,13 @@ func fromRsaPublicKey(pub *rsa.PublicKey) *rawJSONWebKey {
 		Kty: "RSA",
 		N:   newBuffer(pub.N.Bytes()),
 		E:   newBufferFromInt(uint64(pub.E)),
+	}
+}
+
+func fromDilithium5PublicKey(pub *pqc.PublicKey) *rawJSONWebKey {
+	return &rawJSONWebKey{
+		Kty:    "Dilithium5",
+		PQCPub: newBuffer(pub.Bytes),
 	}
 }
 
@@ -471,6 +528,19 @@ func (key rawJSONWebKey) rsaPrivateKey() (*rsa.PrivateKey, error) {
 	return rv, err
 }
 
+func (key rawJSONWebKey) dilithium5PrivateKey() (*pqc.PrivateKey, error) {
+	privateKey := &pqc.PrivateKey{
+		PublicKey: pqc.PublicKey{
+			Bytes:   key.PQCPub.bytes(),
+			AlgName: key.Kty,
+		},
+	}
+
+	privateKey.Signer.Init(key.Kty, key.PQCPriv.bytes())
+
+	return privateKey, nil
+}
+
 func fromEdPrivateKey(ed ed25519.PrivateKey) (*rawJSONWebKey, error) {
 	raw := fromEdPublicKey(ed25519.PublicKey(ed[0:32]))
 
@@ -498,6 +568,13 @@ func fromRsaPrivateKey(rsa *rsa.PrivateKey) (*rawJSONWebKey, error) {
 	if rsa.Precomputed.Qinv != nil {
 		raw.Qi = newBuffer(rsa.Precomputed.Qinv.Bytes())
 	}
+
+	return raw, nil
+}
+
+func fromDilithium5PrivateKey(pqc *pqc.PrivateKey) (*rawJSONWebKey, error) {
+	raw := fromDilithium5PublicKey(&pqc.PublicKey)
+	raw.PQCPriv = newBuffer(pqc.Signer.ExportSecretKey())
 
 	return raw, nil
 }

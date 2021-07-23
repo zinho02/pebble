@@ -18,6 +18,7 @@ package jose
 
 import (
 	"crypto/ecdsa"
+	"crypto/pqc"
 	"crypto/rsa"
 	"encoding/base64"
 	"errors"
@@ -144,6 +145,13 @@ func newVerifier(verificationKey interface{}) (payloadVerifier, error) {
 		return &ecEncrypterVerifier{
 			publicKey: verificationKey,
 		}, nil
+	case *pqc.PublicKey:
+		switch verificationKey.AlgName {
+		case "dilithium5":
+			return &dilithium5EncrypterVerifier{
+				publicKey: verificationKey,
+			}, nil
+		}
 	case []byte:
 		return &symmetricMac{
 			key: verificationKey,
@@ -177,6 +185,11 @@ func makeJWSRecipient(alg SignatureAlgorithm, signingKey interface{}) (recipient
 		return newRSASigner(alg, signingKey)
 	case *ecdsa.PrivateKey:
 		return newECDSASigner(alg, signingKey)
+	case *pqc.PrivateKey:
+		switch signingKey.AlgName {
+		case "dilithium5":
+			return newDilithium5Signer(alg, signingKey)
+		}
 	case []byte:
 		return newSymmetricSigner(alg, signingKey)
 	case JSONWebKey:
