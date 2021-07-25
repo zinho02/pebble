@@ -83,11 +83,11 @@ type edDecrypterSigner struct {
 // newRSARecipient creates recipientKeyInfo based on the given key.
 func newDilithium5Recipient(keyAlg KeyAlgorithm, publicKey *pqc.PublicKey) (recipientKeyInfo, error) {
 	// Verify that key management algorithm is supported by this encrypter
-	switch keyAlg {
-	case DIRECT:
-	default:
-		return recipientKeyInfo{}, ErrUnsupportedAlgorithm
-	}
+	// switch keyAlg {
+	// case DIRECT:
+	// default:
+	// 	return recipientKeyInfo{}, ErrUnsupportedAlgorithm
+	// }
 
 	if publicKey == nil {
 		return recipientKeyInfo{}, errors.New("invalid public key")
@@ -104,11 +104,11 @@ func newDilithium5Recipient(keyAlg KeyAlgorithm, publicKey *pqc.PublicKey) (reci
 // newDilithium5Signer creates a recipientSigInfo based on the given key.
 func newDilithium5Signer(sigAlg SignatureAlgorithm, privateKey *pqc.PrivateKey) (recipientSigInfo, error) {
 	// Verify that key management algorithm is supported by this encrypter
-	switch sigAlg {
-	case HS256, HS384, HS512:
-	default:
-		return recipientSigInfo{}, ErrUnsupportedAlgorithm
-	}
+	// switch sigAlg {
+	// case HS256, HS384, HS512:
+	// default:
+	// 	return recipientSigInfo{}, ErrUnsupportedAlgorithm
+	// }
 
 	if privateKey == nil {
 		return recipientSigInfo{}, errors.New("invalid private key")
