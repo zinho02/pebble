@@ -3,7 +3,6 @@ package ca
 import (
 	"crypto"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -17,9 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/letsencrypt/pebble/acme"
-	"github.com/letsencrypt/pebble/core"
-	"github.com/letsencrypt/pebble/db"
+	"crypto/pqc"
+
+	"github.com/zinho02/pebble/acme"
+	"github.com/zinho02/pebble/core"
+	"github.com/zinho02/pebble/db"
 )
 
 const (
@@ -91,8 +92,8 @@ func makeSubjectKeyID(key crypto.PublicKey) ([]byte, error) {
 // https://github.com/jsha/minica/blob/3a621c05b61fa1c24bcb42fbde4b261db504a74f/main.go
 
 // makeKey creates a new 2048 bit RSA private key and a Subject Key Identifier
-func makeKey() (*rsa.PrivateKey, []byte, error) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+func makeKey() (*pqc.PrivateKey, []byte, error) {
+	key, err := pqc.GenerateKey("dilithium5")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -423,14 +424,14 @@ func (ca *CAImpl) GetRootCert(no int) *core.Certificate {
 	return chain.root.cert
 }
 
-func (ca *CAImpl) GetRootKey(no int) *rsa.PrivateKey {
+func (ca *CAImpl) GetRootKey(no int) *pqc.PrivateKey {
 	chain := ca.getChain(no)
 	if chain == nil {
 		return nil
 	}
 
 	switch key := chain.root.key.(type) {
-	case *rsa.PrivateKey:
+	case *pqc.PrivateKey:
 		return key
 	}
 	return nil
@@ -446,14 +447,14 @@ func (ca *CAImpl) GetIntermediateCert(no int) *core.Certificate {
 	return chain.intermediates[0].cert
 }
 
-func (ca *CAImpl) GetIntermediateKey(no int) *rsa.PrivateKey {
+func (ca *CAImpl) GetIntermediateKey(no int) *pqc.PrivateKey {
 	chain := ca.getChain(no)
 	if chain == nil {
 		return nil
 	}
 
 	switch key := chain.intermediates[0].key.(type) {
-	case *rsa.PrivateKey:
+	case *pqc.PrivateKey:
 		return key
 	}
 	return nil

@@ -17,8 +17,8 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/letsencrypt/pebble/acme"
-	"github.com/letsencrypt/pebble/core"
+	"github.com/zinho02/pebble/acme"
+	"github.com/zinho02/pebble/core"
 )
 
 // ExistingAccountError is an error type indicating when an operation fails

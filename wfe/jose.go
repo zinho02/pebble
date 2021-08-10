@@ -3,19 +3,22 @@ package wfe
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/pqc"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 
-	"github.com/letsencrypt/pebble/acme"
+	"github.com/zinho02/pebble/acme"
 
 	"gopkg.in/square/go-jose.v2"
 )
 
 func algorithmForKey(key *jose.JSONWebKey) (string, error) {
 	switch k := key.Key.(type) {
+	case *pqc.PublicKey:
+		return string(jose.Dilithium5), nil
 	case *rsa.PublicKey:
 		return string(jose.RS256), nil
 	case *ecdsa.PublicKey:

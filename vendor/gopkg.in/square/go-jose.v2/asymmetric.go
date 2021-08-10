@@ -20,6 +20,8 @@ import (
 	"crypto"
 	"crypto/aes"
 	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/pqc"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -28,14 +30,23 @@ import (
 	"fmt"
 	"math/big"
 
-	"golang.org/x/crypto/ed25519"
-	"gopkg.in/square/go-jose.v2/cipher"
-	"gopkg.in/square/go-jose.v2/json"
+	josecipher "github.com/zinho02/go-jose/cipher"
+	"github.com/zinho02/go-jose/json"
 )
+
+// A generic PQC-based encrypter/verifier
+type pqcEncrypterVerifier struct {
+	publicKey *pqc.PublicKey
+}
 
 // A generic RSA-based encrypter/verifier
 type rsaEncrypterVerifier struct {
 	publicKey *rsa.PublicKey
+}
+
+// A generic PQC-based decrypter/signer
+type pqcDecrypterSigner struct {
+	privateKey *pqc.PrivateKey
 }
 
 // A generic RSA-based decrypter/signer
@@ -68,6 +79,20 @@ type edDecrypterSigner struct {
 	privateKey ed25519.PrivateKey
 }
 
+// newPQCRecipient creates recipientKeyInfo based on the given key.
+func newPQCRecipient(keyAlg KeyAlgorithm, publicKey *pqc.PublicKey) (recipientKeyInfo, error) {
+	if publicKey == nil {
+		return recipientKeyInfo{}, errors.New("invalid public key")
+	}
+
+	return recipientKeyInfo{
+		keyAlg: keyAlg,
+		keyEncrypter: &pqcEncrypterVerifier{
+			publicKey: publicKey,
+		},
+	}, nil
+}
+
 // newRSARecipient creates recipientKeyInfo based on the given key.
 func newRSARecipient(keyAlg KeyAlgorithm, publicKey *rsa.PublicKey) (recipientKeyInfo, error) {
 	// Verify that key management algorithm is supported by this encrypter
@@ -85,6 +110,23 @@ func newRSARecipient(keyAlg KeyAlgorithm, publicKey *rsa.PublicKey) (recipientKe
 		keyAlg: keyAlg,
 		keyEncrypter: &rsaEncrypterVerifier{
 			publicKey: publicKey,
+		},
+	}, nil
+}
+
+// newPQCSigner creates a recipientSigInfo based on the given key.
+func newPQCSigner(sigAlg SignatureAlgorithm, privateKey *pqc.PrivateKey) (recipientSigInfo, error) {
+	if privateKey == nil {
+		return recipientSigInfo{}, errors.New("invalid private key")
+	}
+
+	return recipientSigInfo{
+		sigAlg: sigAlg,
+		publicKey: staticPublicKey(&JSONWebKey{
+			Key: privateKey.Public(),
+		}),
+		signer: &pqcDecrypterSigner{
+			privateKey: privateKey,
 		},
 	}, nil
 }
@@ -178,6 +220,19 @@ func newECDSASigner(sigAlg SignatureAlgorithm, privateKey *ecdsa.PrivateKey) (re
 }
 
 // Encrypt the given payload and update the object.
+func (ctx pqcEncrypterVerifier) encryptKey(cek []byte, alg KeyAlgorithm) (recipientInfo, error) {
+	encryptedKey, err := ctx.encrypt(cek, alg)
+	if err != nil {
+		return recipientInfo{}, err
+	}
+
+	return recipientInfo{
+		encryptedKey: encryptedKey,
+		header:       &rawHeader{},
+	}, nil
+}
+
+// Encrypt the given payload and update the object.
 func (ctx rsaEncrypterVerifier) encryptKey(cek []byte, alg KeyAlgorithm) (recipientInfo, error) {
 	encryptedKey, err := ctx.encrypt(cek, alg)
 	if err != nil {
@@ -190,24 +245,37 @@ func (ctx rsaEncrypterVerifier) encryptKey(cek []byte, alg KeyAlgorithm) (recipi
 	}, nil
 }
 
+func (ctx pqcEncrypterVerifier) encrypt(cek []byte, alg KeyAlgorithm) ([]byte, error) {
+	return nil, ErrUnsupportedAlgorithm
+}
+
 // Encrypt the given payload. Based on the key encryption algorithm,
 // this will either use RSA-PKCS1v1.5 or RSA-OAEP (with SHA-1 or SHA-256).
 func (ctx rsaEncrypterVerifier) encrypt(cek []byte, alg KeyAlgorithm) ([]byte, error) {
 	switch alg {
 	case RSA1_5:
-		return rsa.EncryptPKCS1v15(randReader, ctx.publicKey, cek)
+		return rsa.EncryptPKCS1v15(RandReader, ctx.publicKey, cek)
 	case RSA_OAEP:
-		return rsa.EncryptOAEP(sha1.New(), randReader, ctx.publicKey, cek, []byte{})
+		return rsa.EncryptOAEP(sha1.New(), RandReader, ctx.publicKey, cek, []byte{})
 	case RSA_OAEP_256:
-		return rsa.EncryptOAEP(sha256.New(), randReader, ctx.publicKey, cek, []byte{})
+		return rsa.EncryptOAEP(sha256.New(), RandReader, ctx.publicKey, cek, []byte{})
 	}
 
 	return nil, ErrUnsupportedAlgorithm
 }
 
 // Decrypt the given payload and return the content encryption key.
+func (ctx pqcDecrypterSigner) decryptKey(headers rawHeader, recipient *recipientInfo, generator keyGenerator) ([]byte, error) {
+	return ctx.decrypt(recipient.encryptedKey, headers.getAlgorithm(), generator)
+}
+
+// Decrypt the given payload and return the content encryption key.
 func (ctx rsaDecrypterSigner) decryptKey(headers rawHeader, recipient *recipientInfo, generator keyGenerator) ([]byte, error) {
 	return ctx.decrypt(recipient.encryptedKey, headers.getAlgorithm(), generator)
+}
+
+func (ctx pqcDecrypterSigner) decrypt(jek []byte, alg KeyAlgorithm, generator keyGenerator) ([]byte, error) {
+	return nil, ErrUnsupportedAlgorithm
 }
 
 // Decrypt the given payload. Based on the key encryption algorithm,
@@ -260,6 +328,16 @@ func (ctx rsaDecrypterSigner) decrypt(jek []byte, alg KeyAlgorithm, generator ke
 }
 
 // Sign the given payload
+func (ctx pqcDecrypterSigner) signPayload(payload []byte, alg SignatureAlgorithm) (Signature, error) {
+	out, _ := ctx.privateKey.Sign(nil, payload, nil)
+
+	return Signature{
+		Signature: out,
+		protected: &rawHeader{},
+	}, nil
+}
+
+// Sign the given payload
 func (ctx rsaDecrypterSigner) signPayload(payload []byte, alg SignatureAlgorithm) (Signature, error) {
 	var hash crypto.Hash
 
@@ -285,10 +363,10 @@ func (ctx rsaDecrypterSigner) signPayload(payload []byte, alg SignatureAlgorithm
 
 	switch alg {
 	case RS256, RS384, RS512:
-		out, err = rsa.SignPKCS1v15(randReader, ctx.privateKey, hash, hashed)
+		out, err = rsa.SignPKCS1v15(RandReader, ctx.privateKey, hash, hashed)
 	case PS256, PS384, PS512:
-		out, err = rsa.SignPSS(randReader, ctx.privateKey, hash, hashed, &rsa.PSSOptions{
-			SaltLength: rsa.PSSSaltLengthAuto,
+		out, err = rsa.SignPSS(RandReader, ctx.privateKey, hash, hashed, &rsa.PSSOptions{
+			SaltLength: rsa.PSSSaltLengthEqualsHash,
 		})
 	}
 
@@ -300,6 +378,23 @@ func (ctx rsaDecrypterSigner) signPayload(payload []byte, alg SignatureAlgorithm
 		Signature: out,
 		protected: &rawHeader{},
 	}, nil
+}
+
+// Verify the given payload
+func (ctx pqcEncrypterVerifier) verifyPayload(payload []byte, signature []byte, alg SignatureAlgorithm) error {
+	var algName string
+
+	switch alg {
+	case Dilithium5:
+		algName = "dilithium5"
+	case Falcon1024:
+		algName = "falcon1024"
+	}
+
+	if pqc.Verify(payload, signature, ctx.publicKey, algName) {
+		return nil
+	}
+	return ErrUnsupportedAlgorithm
 }
 
 // Verify the given payload
@@ -388,7 +483,7 @@ func (ctx ecKeyGenerator) keySize() int {
 
 // Get a content encryption key for ECDH-ES
 func (ctx ecKeyGenerator) genKey() ([]byte, rawHeader, error) {
-	priv, err := ecdsa.GenerateKey(ctx.publicKey.Curve, randReader)
+	priv, err := ecdsa.GenerateKey(ctx.publicKey.Curve, RandReader)
 	if err != nil {
 		return nil, rawHeader{}, err
 	}
@@ -472,7 +567,7 @@ func (ctx edDecrypterSigner) signPayload(payload []byte, alg SignatureAlgorithm)
 		return Signature{}, ErrUnsupportedAlgorithm
 	}
 
-	sig, err := ctx.privateKey.Sign(randReader, payload, crypto.Hash(0))
+	sig, err := ctx.privateKey.Sign(RandReader, payload, crypto.Hash(0))
 	if err != nil {
 		return Signature{}, err
 	}
@@ -522,7 +617,7 @@ func (ctx ecDecrypterSigner) signPayload(payload []byte, alg SignatureAlgorithm)
 	_, _ = hasher.Write(payload)
 	hashed := hasher.Sum(nil)
 
-	r, s, err := ecdsa.Sign(randReader, ctx.privateKey, hashed)
+	r, s, err := ecdsa.Sign(RandReader, ctx.privateKey, hashed)
 	if err != nil {
 		return Signature{}, err
 	}

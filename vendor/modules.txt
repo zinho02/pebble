@@ -1,25 +1,38 @@
+# github.com/jmhodges/clock v0.0.0-20160418191101-880ee4c33548
+github.com/jmhodges/clock
 # github.com/letsencrypt/challtestsrv v1.2.0
 ## explicit
 github.com/letsencrypt/challtestsrv
+# github.com/letsencrypt/pebble v1.0.1
+## explicit
+github.com/letsencrypt/pebble/acme
+github.com/letsencrypt/pebble/cmd
+github.com/letsencrypt/pebble/core
+github.com/letsencrypt/pebble/db
 # github.com/miekg/dns v1.1.15
 ## explicit
 github.com/miekg/dns
-# golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
+# github.com/zinho02/go-jose v2.6.0+incompatible
+## explicit
+github.com/zinho02/go-jose/cipher
+github.com/zinho02/go-jose/json
+# golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/pbkdf2
-# golang.org/x/net v0.0.0-20181207154023-610586996380
-## explicit
+# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 golang.org/x/net/bpf
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-# golang.org/x/sys v0.0.0-20181206074257-70b957f3b65e
-## explicit
+# golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# gopkg.in/square/go-jose.v2 v2.1.9
+golang.org/x/sys/windows
+# gopkg.in/square/go-jose.v2 v2.6.0 => ../go-jose
 ## explicit
 gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json
+# gopkg.in/square/go-jose.v2 => ../go-jose

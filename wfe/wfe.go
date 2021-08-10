@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -28,11 +27,13 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/letsencrypt/pebble/acme"
-	"github.com/letsencrypt/pebble/ca"
-	"github.com/letsencrypt/pebble/core"
-	"github.com/letsencrypt/pebble/db"
-	"github.com/letsencrypt/pebble/va"
+	"crypto/pqc"
+
+	"github.com/zinho02/pebble/acme"
+	"github.com/zinho02/pebble/ca"
+	"github.com/zinho02/pebble/core"
+	"github.com/zinho02/pebble/db"
+	"github.com/zinho02/pebble/va"
 )
 
 const (
@@ -348,7 +349,7 @@ func (wfe *WebFrontEndImpl) sendError(prob *acme.ProblemDetails, response http.R
 }
 
 type certGetter func(no int) *core.Certificate
-type keyGetter func(no int) *rsa.PrivateKey
+type keyGetter func(no int) *pqc.PrivateKey
 
 func (wfe *WebFrontEndImpl) handleCert(
 	certGet certGetter,
@@ -421,10 +422,11 @@ func (wfe *WebFrontEndImpl) handleKey(
 
 		// Write main response
 		var buf bytes.Buffer
+		bytes, _ := x509.MarshalPKCS8PrivateKey(key)
 
 		err = pem.Encode(&buf, &pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(key),
+			Type:  "PRIVATE KEY",
+			Bytes: bytes,
 		})
 		if err != nil {
 			wfe.sendError(acme.InternalErrorProblem("unable to encode private key to PEM"), response)
