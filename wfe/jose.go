@@ -21,7 +21,7 @@ func algorithmForKey(key *jose.JSONWebKey) (string, error) {
 		switch k.AlgName {
 		case "dilithium5":
 			return string(jose.Dilithium5), nil
-		case "falcon1024":
+		case "falcon-1024":
 			return string(jose.Falcon1024), nil
 		}
 	case *rsa.PublicKey:

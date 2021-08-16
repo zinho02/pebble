@@ -93,7 +93,7 @@ func makeSubjectKeyID(key crypto.PublicKey) ([]byte, error) {
 
 // makeKey creates a new 2048 bit RSA private key and a Subject Key Identifier
 func makeKey() (*pqc.PrivateKey, []byte, error) {
-	key, err := pqc.GenerateKey("falcon1024")
+	key, err := pqc.GenerateKey("falcon-1024")
 	if err != nil {
 		return nil, nil, err
 	}
