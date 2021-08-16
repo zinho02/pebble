@@ -18,7 +18,12 @@ import (
 func algorithmForKey(key *jose.JSONWebKey) (string, error) {
 	switch k := key.Key.(type) {
 	case *pqc.PublicKey:
-		return string(jose.Dilithium5), nil
+		switch k.AlgName {
+		case "dilithium5":
+			return string(jose.Dilithium5), nil
+		case "falcon1024":
+			return string(jose.Falcon1024), nil
+		}
 	case *rsa.PublicKey:
 		return string(jose.RS256), nil
 	case *ecdsa.PublicKey:
