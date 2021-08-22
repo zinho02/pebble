@@ -91,7 +91,7 @@ func makeSubjectKeyID(key crypto.PublicKey) ([]byte, error) {
 // makeKey and makeRootCert are adapted from MiniCA:
 // https://github.com/jsha/minica/blob/3a621c05b61fa1c24bcb42fbde4b261db504a74f/main.go
 
-// makeKey creates a new 2048 bit RSA private key and a Subject Key Identifier
+// makeKey creates a new PQC private key and a Subject Key Identifier
 func makeKey() (*pqc.PrivateKey, []byte, error) {
 	key, err := pqc.GenerateKey("falcon-1024")
 	if err != nil {
