@@ -21,8 +21,38 @@ func algorithmForKey(key *jose.JSONWebKey) (string, error) {
 		switch k.AlgName {
 		case "dilithium5":
 			return string(jose.Dilithium5), nil
-		case "falcon-1024":
-			return string(jose.Falcon1024), nil
+		case "dilithium5-aes":
+			return string(jose.Dilithium5AES), nil
+		case "rainbow-v-classic":
+			return string(jose.RainbowVClassic), nil
+		case "rainbow-v-circumzenithal":
+			return string(jose.RainbowVCircumzenithal), nil
+		case "rainbow-v-compressed":
+			return string(jose.RainbowVCompressed), nil
+		case "sphincs+-haraka-256s-simple":
+			return string(jose.SphincsPlusHaraka256sSimple), nil
+		case "sphincs+-haraka-256f-simple":
+			return string(jose.SphincsPlusHaraka256fSimple), nil
+		case "sphincs+-haraka-256s-robust":
+			return string(jose.SphincsPlusHaraka256sRobust), nil
+		case "sphincs+-haraka-256f-robust":
+			return string(jose.SphincsPlusHaraka256fRobust), nil
+		case "sphincs+-sha256-256s-simple":
+			return string(jose.SphincsPlusSHA256256sSimple), nil
+		case "sphincs+-sha256-256f-simple":
+			return string(jose.SphincsPlusSHA256256fSimple), nil
+		case "sphincs+-sha256-256s-robust":
+			return string(jose.SphincsPlusHaraka256sRobust), nil
+		case "sphincs+-sha256-256f-robust":
+			return string(jose.SphincsPlusHaraka256fRobust), nil
+		case "sphincs+-shake256-256s-simple":
+			return string(jose.SphincsPlusSHAKE256256sSimple), nil
+		case "sphincs+-shake256-256f-simple":
+			return string(jose.SphincsPlusSHAKE256256fSimple), nil
+		case "sphincs+-shake256-256s-robust":
+			return string(jose.SphincsPlusSHAKE256256sRobust), nil
+		case "sphincs+-shake256-256f-robust":
+			return string(jose.SphincsPlusSHAKE256256fRobust), nil
 		}
 	case *rsa.PublicKey:
 		return string(jose.RS256), nil

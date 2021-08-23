@@ -93,7 +93,7 @@ func makeSubjectKeyID(key crypto.PublicKey) ([]byte, error) {
 
 // makeKey creates a new PQC private key and a Subject Key Identifier
 func makeKey() (*pqc.PrivateKey, []byte, error) {
-	key, err := pqc.GenerateKey("falcon-1024")
+	key, err := pqc.GenerateKey("sphincs+-shake256-256f-robust")
 	if err != nil {
 		return nil, nil, err
 	}
