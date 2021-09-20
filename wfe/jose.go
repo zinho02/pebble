@@ -42,9 +42,9 @@ func algorithmForKey(key *jose.JSONWebKey) (string, error) {
 		case "sphincs+-sha256-256f-simple":
 			return string(jose.SphincsPlusSHA256256fSimple), nil
 		case "sphincs+-sha256-256s-robust":
-			return string(jose.SphincsPlusHaraka256sRobust), nil
+			return string(jose.SphincsPlusSHA256256sRobust), nil
 		case "sphincs+-sha256-256f-robust":
-			return string(jose.SphincsPlusHaraka256fRobust), nil
+			return string(jose.SphincsPlusSHA256256fRobust), nil
 		case "sphincs+-shake256-256s-simple":
 			return string(jose.SphincsPlusSHAKE256256sSimple), nil
 		case "sphincs+-shake256-256f-simple":
@@ -53,6 +53,40 @@ func algorithmForKey(key *jose.JSONWebKey) (string, error) {
 			return string(jose.SphincsPlusSHAKE256256sRobust), nil
 		case "sphincs+-shake256-256f-robust":
 			return string(jose.SphincsPlusSHAKE256256fRobust), nil
+		case "dilithium2":
+			return string(jose.Dilithium2), nil
+		case "dilithium2-aes":
+			return string(jose.Dilithium2AES), nil
+		case "rainbow-i-classic":
+			return string(jose.RainbowIClassic), nil
+		case "rainbow-i-circumzenithal":
+			return string(jose.RainbowICircumzenithal), nil
+		case "rainbow-i-compressed":
+			return string(jose.RainbowICompressed), nil
+		case "sphincs+-haraka-128s-simple":
+			return string(jose.SphincsPlusHaraka128sSimple), nil
+		case "sphincs+-haraka-128f-simple":
+			return string(jose.SphincsPlusHaraka128fSimple), nil
+		case "sphincs+-haraka-128s-robust":
+			return string(jose.SphincsPlusHaraka128sRobust), nil
+		case "sphincs+-haraka-128f-robust":
+			return string(jose.SphincsPlusHaraka128fRobust), nil
+		case "sphincs+-sha256-128s-simple":
+			return string(jose.SphincsPlusSHA256128sSimple), nil
+		case "sphincs+-sha256-128f-simple":
+			return string(jose.SphincsPlusSHA256128fSimple), nil
+		case "sphincs+-sha256-128s-robust":
+			return string(jose.SphincsPlusSHA256128sRobust), nil
+		case "sphincs+-sha256-128f-robust":
+			return string(jose.SphincsPlusSHA256128fRobust), nil
+		case "sphincs+-shake256-128s-simple":
+			return string(jose.SphincsPlusSHAKE256128sSimple), nil
+		case "sphincs+-shake256-128f-simple":
+			return string(jose.SphincsPlusSHAKE256128fSimple), nil
+		case "sphincs+-shake256-128s-robust":
+			return string(jose.SphincsPlusSHAKE256128sRobust), nil
+		case "sphincs+-shake256-128f-robust":
+			return string(jose.SphincsPlusSHAKE256128fRobust), nil
 		}
 	case *rsa.PublicKey:
 		return string(jose.RS256), nil
