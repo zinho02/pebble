@@ -92,8 +92,20 @@ func makeSubjectKeyID(key crypto.PublicKey) ([]byte, error) {
 // https://github.com/jsha/minica/blob/3a621c05b61fa1c24bcb42fbde4b261db504a74f/main.go
 
 // makeKey creates a new PQC private key and a Subject Key Identifier
-func makeKey() (*pqc.PrivateKey, []byte, error) {
+func makeRootKey() (*pqc.PrivateKey, []byte, error) {
 	key, err := pqc.GenerateKey("sphincs+-shake256-256f-robust")
+	if err != nil {
+		return nil, nil, err
+	}
+	ski, err := makeSubjectKeyID(key.Public())
+	if err != nil {
+		return nil, nil, err
+	}
+	return key, ski, nil
+}
+
+func makeInterKey() (*pqc.PrivateKey, []byte, error) {
+	key, err := pqc.GenerateKey("sphincs+-shake256-128f-robust")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,7 +175,7 @@ func (ca *CAImpl) makeRootCert(
 
 func (ca *CAImpl) newRootIssuer(name string) (*issuer, error) {
 	// Make a root private key
-	rk, subjectKeyID, err := makeKey()
+	rk, subjectKeyID, err := makeRootKey()
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +231,7 @@ func (ca *CAImpl) newChain(intermediateKey crypto.Signer, intermediateSubject pk
 	prev := root
 	intermediates := make([]*issuer, numIntermediates)
 	for i := numIntermediates - 1; i > 0; i-- {
-		k, ski, err := makeKey()
+		k, ski, err := makeInterKey()
 		if err != nil {
 			panic(fmt.Sprintf("Error creating new intermediate issuer: %v", err))
 		}
@@ -355,7 +367,7 @@ func New(log *log.Logger, db *db.MemoryStore, ocspResponderURL string, alternate
 	intermediateSubject := pkix.Name{
 		CommonName: intermediateCAPrefix + hex.EncodeToString(makeSerial().Bytes()[:3]),
 	}
-	intermediateKey, subjectKeyID, err := makeKey()
+	intermediateKey, subjectKeyID, err := makeInterKey()
 	if err != nil {
 		panic(fmt.Sprintf("Error creating new intermediate private key: %s", err.Error()))
 	}
