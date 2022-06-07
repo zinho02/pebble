@@ -14,6 +14,8 @@ github.com/letsencrypt/pebble v1.0.1/go.mod h1:MXRPY0vql99p2oTr1rKvGYKR3muoWIXhE
 github.com/miekg/dns v1.1.1/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/miekg/dns v1.1.15 h1:CSSIDtllwGLMoA6zjdKnaE6Tx6eVUxQ29LUgGetiDCI=
 github.com/miekg/dns v1.1.15/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
+github.com/open-quantum-safe/liboqs-go v0.0.0-20220105163900-e0f759d70fa5 h1:1O/T54x9VEGOuwFsCXWxsd0MZnXIzH7rAkROEVXyLAQ=
+github.com/open-quantum-safe/liboqs-go v0.0.0-20220105163900-e0f759d70fa5/go.mod h1:4S9+nsSIEsdAUrEMXIeu2/XYjFiArMsIN86aHgYPzxA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
